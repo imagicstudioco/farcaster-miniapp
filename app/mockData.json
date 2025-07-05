@@ -1,0 +1,134 @@
+{
+    "users": [
+      {
+        "walletAddress": "0x1234567890abcdef1234567890abcdef12345678",
+        "membershipLevel": "Based",
+        "enbBalance": 1250,
+        "lastCheckinTime": "2024-01-15T10:30:00Z",
+        "consecutiveDays": 7,
+        "totalEarned": 3500,
+        "username": "miner_alice",
+        "joinDate": "2024-01-01T00:00:00Z"
+      },
+      {
+        "walletAddress": "0x14E85A3859B7532CB31E16EA66fB5F981B6dE1C0",
+        "membershipLevel": "Super Based",
+        "enbBalance": 8750,
+        "lastCheckinTime": "2024-01-15T14:22:00Z",
+        "consecutiveDays": 15,
+        "totalEarned": 12500,
+        "username": "crypto_bob",
+        "joinDate": "2023-12-15T00:00:00Z"
+      },
+      {
+        "walletAddress": "0x9876543210fedcba9876543210fedcba98765432",
+        "membershipLevel": "Legendary",
+        "enbBalance": 25000,
+        "lastCheckinTime": "2024-01-15T08:15:00Z",
+        "consecutiveDays": 30,
+        "totalEarned": 45000,
+        "username": "legendary_carol",
+        "joinDate": "2023-11-01T00:00:00Z"
+      },
+      {
+        "walletAddress": "0xfedcba0987654321fedcba0987654321fedcba09",
+        "membershipLevel": "Based",
+        "enbBalance": 500,
+        "lastCheckinTime": "2024-01-14T16:45:00Z",
+        "consecutiveDays": 3,
+        "totalEarned": 1500,
+        "username": "newbie_dave",
+        "joinDate": "2024-01-10T00:00:00Z"
+      },
+      {
+        "walletAddress": "0x5555555555555555555555555555555555555555",
+        "membershipLevel": "Super Based",
+        "enbBalance": 12000,
+        "lastCheckinTime": "2024-01-15T12:00:00Z",
+        "consecutiveDays": 22,
+        "totalEarned": 18000,
+        "username": "pro_miner_eve",
+        "joinDate": "2023-12-01T00:00:00Z"
+      },
+      {
+        "walletAddress": "0x6666666666666666666666666666666666666666",
+        "membershipLevel": "Based",
+        "enbBalance": 0,
+        "lastCheckinTime": null,
+        "consecutiveDays": 0,
+        "totalEarned": 0,
+        "username": "inactive_frank",
+        "joinDate": "2024-01-05T00:00:00Z"
+      },
+      {
+        "walletAddress": "0x7777777777777777777777777777777777777777",
+        "membershipLevel": "Legendary",
+        "enbBalance": 50000,
+        "lastCheckinTime": "2024-01-15T06:30:00Z",
+        "consecutiveDays": 45,
+        "totalEarned": 75000,
+        "username": "whale_grace",
+        "joinDate": "2023-10-01T00:00:00Z"
+      },
+      {
+        "walletAddress": "0x8888888888888888888888888888888888888888",
+        "membershipLevel": "Super Based",
+        "enbBalance": 7500,
+        "lastCheckinTime": "2024-01-15T09:45:00Z",
+        "consecutiveDays": 12,
+        "totalEarned": 11000,
+        "username": "steady_henry",
+        "joinDate": "2023-12-20T00:00:00Z"
+      },
+      {
+        "walletAddress": "0x9999999999999999999999999999999999999999",
+        "membershipLevel": "Based",
+        "enbBalance": 2500,
+        "lastCheckinTime": "2024-01-15T11:20:00Z",
+        "consecutiveDays": 8,
+        "totalEarned": 4000,
+        "username": "active_iris",
+        "joinDate": "2024-01-03T00:00:00Z"
+      },
+      {
+        "walletAddress": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "membershipLevel": "Legendary",
+        "enbBalance": 35000,
+        "lastCheckinTime": "2024-01-15T07:15:00Z",
+        "consecutiveDays": 60,
+        "totalEarned": 90000,
+        "username": "veteran_jack",
+        "joinDate": "2023-09-01T00:00:00Z"
+      }
+    ],
+    "membershipLevels": {
+      "Based": {
+        "dailyYield": 5,
+        "upgradeRequirement": 0,
+        "name": "Based",
+        "isDefault": true,
+        "color": "text-blue-600"
+      },
+      "Super Based": {
+        "dailyYield": 10,
+        "upgradeRequirement": 5000,
+        "name": "Super Based",
+        "isDefault": false,
+        "color": "text-purple-600"
+      },
+      "Legendary": {
+        "dailyYield": 15,
+        "upgradeRequirement": 15000,
+        "name": "Legendary",
+        "isDefault": false,
+        "color": "text-yellow-600"
+      }
+    },
+    "statistics": {
+      "totalUsers": 10,
+      "totalENBStaked": 150000,
+      "averageDailyYield": 8.5,
+      "mostActiveUser": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "newestUser": "0xfedcba0987654321fedcba0987654321fedcba09"
+    }
+  }
