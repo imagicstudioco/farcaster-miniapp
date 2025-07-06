@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
-import { ENB_MINI_APP_ABI, ENB_MINI_APP_ADDRESS } from '../constants/enbMiniAppAbi';
+import { ENB_MINI_APP_ABI, ENB_MINI_APP_ADDRESS, ENB_TOKEN_ABI, ENB_TOKEN_ADDRESS } from '../constants/enbMiniAppAbi';
 import { API_BASE_URL } from '../config';
 import {
   createWalletClient,
@@ -69,6 +69,9 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [enbBalance, setEnbBalance] = useState<number>(0);
+  const [enbBalanceLoading, setEnbBalanceLoading] = useState(false);
+  const [inviteClaimLoading, setInviteClaimLoading] = useState(false);
   
   // Countdown state
   const [timeLeft, setTimeLeft] = useState<{
@@ -288,6 +291,31 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
     }
   }, [address, calculateTimeLeft]);
 
+  const fetchEnbBalance = async () => {
+    if (!address) return;
+    
+    setEnbBalanceLoading(true);
+    try {
+      const publicClient = createPublicClient({ chain: base, transport: http() });
+      
+      const balance = await publicClient.readContract({
+        address: ENB_TOKEN_ADDRESS as `0x${string}`,
+        abi: ENB_TOKEN_ABI,
+        functionName: 'balanceOf',
+        args: [address as `0x${string}`]
+      });
+      
+      // Convert from wei to ENB (assuming 18 decimals)
+      const balanceInEnb = Number(balance) / Math.pow(10, 18);
+      setEnbBalance(balanceInEnb);
+    } catch (err) {
+      console.error('Error fetching ENB balance:', err);
+      setEnbBalance(0);
+    } finally {
+      setEnbBalanceLoading(false);
+    }
+  };
+
   const refreshProfile = async () => {
     if (!address) return;
     
@@ -403,6 +431,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
 
       setShowDailyClaimModal(true);
       await refreshProfile();
+      await fetchEnbBalance(); // Refresh ENB balance after claim
     } catch (err) {
       console.error(err);
       alert('Daily claim failed. Please try again.');
@@ -445,6 +474,117 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
 
   const handleInformation = async () => {
     setInformationModal(true);   
+  };
+
+  const handleClaimInvites = async () => {
+    if (!address || !profile?.invitationUsage || profile.invitationUsage.totalUses < 5) return;
+
+    setInviteClaimLoading(true);
+    try {
+      const publicClient = createPublicClient({ chain: base, transport: http() });
+
+      const baseTxData = encodeFunctionData({
+        abi: ENB_MINI_APP_ABI,
+        functionName: 'claimForInvite',
+        args: [address, BigInt(25 * Math.pow(10, 18))] // 25 ENB in wei
+      });
+
+      let finalTxData = baseTxData;
+      let referralTag = '';
+      let walletClient = null;
+
+      try {
+        if (typeof window === 'undefined' || !window.ethereum) {
+          throw new Error('Ethereum provider not found');
+        }
+
+        const ethereum = window.ethereum as EIP1193Provider;
+
+        walletClient = createWalletClient({
+          chain: base,
+          transport: custom(ethereum)
+        });
+
+        referralTag = getReferralTag({
+          user: address as `0x${string}`,
+          consumer: DIVVI_CONFIG.consumer as `0x${string}`,
+          providers: DIVVI_CONFIG.providers as `0x${string}`[]
+        });
+
+        finalTxData = (baseTxData + referralTag) as `0x${string}`;
+        console.log('Divvi referral tag added to invite claim transaction');
+      } catch (referralError) {
+        console.warn('Referral setup failed for invite claim:', referralError);
+      }
+
+      let gasEstimate;
+      try {
+        gasEstimate = await publicClient.estimateGas({
+          account: address,
+          to: ENB_MINI_APP_ADDRESS,
+          data: finalTxData
+        });
+      } catch {
+        gasEstimate = BigInt(100000); // fallback
+      }
+
+      let txHash: `0x${string}`;
+
+      if (window.ethereum) {
+        const txParams = {
+          from: address as `0x${string}`,
+          to: ENB_MINI_APP_ADDRESS as `0x${string}`,
+          data: finalTxData,
+          gas: `0x${gasEstimate.toString(16)}` as `0x${string}`
+        };
+
+        txHash = await (window.ethereum as EIP1193Provider).request({
+          method: 'eth_sendTransaction',
+          params: [txParams]
+        }) as `0x${string}`;
+      } else {
+        txHash = await writeContractAsync({
+          address: ENB_MINI_APP_ADDRESS,
+          abi: ENB_MINI_APP_ABI,
+          functionName: 'claimForInvite',
+          args: [address, BigInt(25 * Math.pow(10, 18))]
+        }) as `0x${string}`;
+      }
+
+      if (walletClient && referralTag && txHash) {
+        try {
+          const chainId = await walletClient.getChainId();
+          await submitReferral({ txHash, chainId });
+          console.log('Divvi referral submitted for invite claim');
+        } catch (referralError) {
+          console.warn('Referral submission failed for invite claim:', referralError);
+        }
+      }
+
+      // Refresh profile and ENB balance after successful claim
+      await refreshProfile();
+      await fetchEnbBalance();
+      
+      // Show success message
+      alert('Successfully claimed 25 ENB for your invites!');
+    } catch (err) {
+      console.error('Invite claim failed:', err);
+      
+      // Handle specific error types
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      
+      if (errorMessage.includes('insufficient funds') || errorMessage.includes('gas')) {
+        alert('Insufficient ETH balance to cover gas fees. Please add some ETH to your wallet and try again.');
+      } else if (errorMessage.includes('user rejected') || errorMessage.includes('User rejected')) {
+        alert('Transaction was cancelled by user.');
+      } else if (errorMessage.includes('execution reverted')) {
+        alert('Transaction failed. You may not be eligible to claim invites or the contract requirements are not met.');
+      } else {
+        alert(`Invite claim failed: ${errorMessage}`);
+      }
+    } finally {
+      setInviteClaimLoading(false);
+    }
   };
 
   const handleUpgrade = async () => {
@@ -564,6 +704,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
 
       setShowUpgradeModal(true);
       await refreshProfile();
+      await fetchEnbBalance(); // Refresh ENB balance after upgrade
     } catch (err) {
       console.error(err);
       
@@ -592,6 +733,13 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
   useEffect(() => {
     checkAccountStatus();
   }, [checkAccountStatus]);
+
+  // Fetch ENB balance when address changes
+  useEffect(() => {
+    if (address) {
+      fetchEnbBalance();
+    }
+  }, [address, fetchEnbBalance]);
 
   // Add this useEffect to show tips on first load
   useEffect(() => {
@@ -824,10 +972,17 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Token Balance</h2>
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-gray-600">Total Earned</label>
-              <p className="text-lg font-semibold text-blue-600">
-                {profile.totalEarned.toLocaleString()} ENB
-              </p>
+              <label className="text-sm font-medium text-gray-600">ENB Balance</label>
+              {enbBalanceLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-gray-600">Loading...</span>
+                </div>
+              ) : (
+                <p className="text-lg font-semibold text-blue-600">
+                  {enbBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} ENB
+                </p>
+              )}
             </div>
             <div>
             <button
@@ -897,10 +1052,20 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
                 </div>
               </div>
               <button
-                disabled={true}
-                className="w-full px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed disabled:opacity-60"
+                disabled={!profile.invitationUsage || profile.invitationUsage.totalUses < 5}
+                onClick={handleClaimInvites}
+                className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                  profile.invitationUsage && profile.invitationUsage.totalUses >= 5
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                } disabled:opacity-60`}
               >
-                Claim $ENB for your invites
+                {inviteClaimLoading 
+                  ? 'Claiming...' 
+                  : profile.invitationUsage && profile.invitationUsage.totalUses >= 5
+                  ? 'Claim 25 ENB for your invites'
+                  : `Need ${5 - (profile.invitationUsage?.totalUses || 0)} more invites (${profile.invitationUsage?.totalUses || 0}/5)`
+                }
               </button>
             </div>
           </div>
@@ -989,7 +1154,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
                   <p className="text-sm font-medium">Upgrade Requirements</p>
                   <p className="text-sm mt-1">
                     • You need ETH in your wallet to pay for gas fees<br/>
-                    • It will cost you ENB tokens to upgrade: 5,000 ENB for Super Based, 15,000 ENB for Legendary<br/>
+                    • It will cost you ENB tokens to upgrade: 30,000 ENB for Super Based, 30,000 ENB for Legendary<br/>
                     • Based → Super Based: {profile.membershipLevel === 'Based' ? `${profile.consecutiveDays}/14` : '14/14'} consecutive days<br/>
                     • Super Based → Legendary: {profile.membershipLevel === 'Super Based' ? `${profile.consecutiveDays}/28` : '28/28'} consecutive days
                   </p>
@@ -1152,16 +1317,16 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
                 On the Base Layer there are 3 levels to earn and each level has the daily earning
               </p>
 		<ul className="text-left space-y-2 mt-3">
-		  <li>• <strong>Based</strong> - On this level (the first level) you earn 5 $ENB a day</li>
-		  <li>• <strong>Super Based</strong> - As a Super Based member you earn 10 $ENB. To upgrade to Super Based you need:
+		  <li>• <strong>Based</strong> - On this level (the first level) you earn 10 ENB a day</li>
+		  <li>• <strong>Super Based</strong> - As a Super Based member you earn 15 ENB. To upgrade to Super Based you need:
 		    <ul className="ml-4 mt-1 space-y-1">
-		      <li>- 5,000 $ENB in your wallet</li>
+		      <li>- 30,000 ENB in your wallet</li>
 		      <li>- 14 consecutive days of daily claims</li>
 		    </ul>
 		  </li>
-		  <li>• <strong>Legendary</strong> - The Legendary is the highest level allowing you to earn 15 $ENB everyday. To upgrade to Legendary you need:
+		  <li>• <strong>Legendary</strong> - The Legendary is the highest level allowing you to earn 20 ENB everyday. To upgrade to Legendary you need:
 		    <ul className="ml-4 mt-1 space-y-1">
-		      <li>- 15,000 $ENB in your wallet</li>
+		      <li>- 60,000 ENB in your wallet</li>
 		      <li>- 28 consecutive days of daily claims</li>
 		    </ul>
 		  </li>
