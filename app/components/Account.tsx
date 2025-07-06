@@ -18,14 +18,6 @@ import { Button } from "./Button";
 import { Icon } from "./Icon";
 import { sdk } from '@farcaster/frame-sdk'
 
-const DIVVI_CONFIG = {
-  consumer: '0xaF108Dd1aC530F1c4BdED13f43E336A9cec92B44',
-  providers: [
-    '0x0423189886d7966f0dd7e7d256898daeee625dca',
-    '0xc95876688026be9d6fa7a7c33328bd013effa2bb'
-  ]
-};
-
 interface UserProfile {
   walletAddress: string;
   membershipLevel: 'Based' | 'Super Based' | 'Legendary' | string;
@@ -344,53 +336,53 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
         args: [address]
       });
 
-      let finalTxData = baseTxData;
-      let referralTag = '';
-      let walletClient = null;
+      let txHash: `0x${string}`;
 
       try {
         if (typeof window === 'undefined' || !window.ethereum) {
           throw new Error('Ethereum provider not found');
         }
 
-        const ethereum = window.ethereum as EIP1193Provider;
-
-        walletClient = createWalletClient({
+        // Step 1: Create a wallet client and get the account
+        const walletClient = createWalletClient({
           chain: base,
-          transport: custom(ethereum)
+          transport: custom(window.ethereum),
+        });
+        const [account] = await walletClient.getAddresses();
+
+        // Step 2: Generate a referral tag for the user
+        const referralTag = getReferralTag({
+          user: account, // The user address making the transaction
+          consumer: '0xaF108Dd1aC530F1c4BdED13f43E336A9cec92B44', // Your Divvi Identifier
         });
 
-        referralTag = getReferralTag({
-          user: address as `0x${string}`,
-          consumer: DIVVI_CONFIG.consumer as `0x${string}`,
-          providers: DIVVI_CONFIG.providers as `0x${string}`[]
+        // Step 3: Send the transaction with referral tag
+        txHash = await walletClient.sendTransaction({
+          account,
+          to: ENB_MINI_APP_ADDRESS as `0x${string}`,
+          data: (baseTxData + referralTag) as `0x${string}`,
         });
 
-        finalTxData = (baseTxData + referralTag) as `0x${string}`;
-        console.log('Divvi referral tag added to daily claim transaction');
+        // Step 4: Get the chain ID of the chain that the transaction was sent to
+        const chainId = await walletClient.getChainId();
+
+        // Step 5: Report the transaction to Divvi
+        await submitReferral({
+          txHash,
+          chainId,
+        });
+
+        console.log('Divvi referral submitted for daily claim');
       } catch (referralError) {
         console.warn('Referral setup failed for daily claim:', referralError);
-      }
-
-      let gasEstimate;
-      try {
-        gasEstimate = await publicClient.estimateGas({
-          account: address,
-          to: ENB_MINI_APP_ADDRESS,
-          data: finalTxData
-        });
-      } catch {
-        gasEstimate = BigInt(100000); // fallback
-      }
-
-      let txHash: `0x${string}`;
-
+        
+        // Fallback to regular transaction without referral
       if (window.ethereum) {
         const txParams = {
           from: address as `0x${string}`,
           to: ENB_MINI_APP_ADDRESS as `0x${string}`,
-          data: finalTxData,
-          gas: `0x${gasEstimate.toString(16)}` as `0x${string}`
+            data: baseTxData,
+            gas: `0x${BigInt(100000).toString(16)}` as `0x${string}`
         };
 
         txHash = await (window.ethereum as EIP1193Provider).request({
@@ -404,15 +396,6 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
           functionName: 'dailyClaim',
           args: [address]
         }) as `0x${string}`;
-      }
-
-      if (walletClient && referralTag && txHash) {
-        try {
-          const chainId = await walletClient.getChainId();
-          await submitReferral({ txHash, chainId });
-          console.log('Divvi referral submitted for daily claim');
-        } catch (referralError) {
-          console.warn('Referral submission failed for daily claim:', referralError);
         }
       }
 
@@ -489,75 +472,66 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
         args: [address, BigInt(25 * Math.pow(10, 18))] // 25 ENB in wei
       });
 
-      let finalTxData = baseTxData;
-      let referralTag = '';
-      let walletClient = null;
+      let txHash: `0x${string}`;
 
       try {
         if (typeof window === 'undefined' || !window.ethereum) {
           throw new Error('Ethereum provider not found');
         }
 
-        const ethereum = window.ethereum as EIP1193Provider;
-
-        walletClient = createWalletClient({
+        // Step 1: Create a wallet client and get the account
+        const walletClient = createWalletClient({
           chain: base,
-          transport: custom(ethereum)
+          transport: custom(window.ethereum),
+        });
+        const [account] = await walletClient.getAddresses();
+
+        // Step 2: Generate a referral tag for the user
+        const referralTag = getReferralTag({
+          user: account, // The user address making the transaction
+          consumer: '0xaF108Dd1aC530F1c4BdED13f43E336A9cec92B44', // Your Divvi Identifier
         });
 
-        referralTag = getReferralTag({
-          user: address as `0x${string}`,
-          consumer: DIVVI_CONFIG.consumer as `0x${string}`,
-          providers: DIVVI_CONFIG.providers as `0x${string}`[]
+        // Step 3: Send the transaction with referral tag
+        txHash = await walletClient.sendTransaction({
+          account,
+          to: ENB_MINI_APP_ADDRESS as `0x${string}`,
+          data: (baseTxData + referralTag) as `0x${string}`,
         });
 
-        finalTxData = (baseTxData + referralTag) as `0x${string}`;
-        console.log('Divvi referral tag added to invite claim transaction');
+        // Step 4: Get the chain ID of the chain that the transaction was sent to
+        const chainId = await walletClient.getChainId();
+
+        // Step 5: Report the transaction to Divvi
+        await submitReferral({
+          txHash,
+          chainId,
+        });
+
+        console.log('Divvi referral submitted for invite claim');
       } catch (referralError) {
         console.warn('Referral setup failed for invite claim:', referralError);
-      }
+        
+        // Fallback to regular transaction without referral
+        if (window.ethereum) {
+          const txParams = {
+            from: address as `0x${string}`,
+            to: ENB_MINI_APP_ADDRESS as `0x${string}`,
+            data: baseTxData,
+            gas: `0x${BigInt(100000).toString(16)}` as `0x${string}`
+          };
 
-      let gasEstimate;
-      try {
-        gasEstimate = await publicClient.estimateGas({
-          account: address,
-          to: ENB_MINI_APP_ADDRESS,
-          data: finalTxData
-        });
-      } catch {
-        gasEstimate = BigInt(100000); // fallback
-      }
-
-      let txHash: `0x${string}`;
-
-      if (window.ethereum) {
-        const txParams = {
-          from: address as `0x${string}`,
-          to: ENB_MINI_APP_ADDRESS as `0x${string}`,
-          data: finalTxData,
-          gas: `0x${gasEstimate.toString(16)}` as `0x${string}`
-        };
-
-        txHash = await (window.ethereum as EIP1193Provider).request({
-          method: 'eth_sendTransaction',
-          params: [txParams]
-        }) as `0x${string}`;
-      } else {
-        txHash = await writeContractAsync({
-          address: ENB_MINI_APP_ADDRESS,
-          abi: ENB_MINI_APP_ABI,
-          functionName: 'claimForInvite',
-          args: [address, BigInt(25 * Math.pow(10, 18))]
-        }) as `0x${string}`;
-      }
-
-      if (walletClient && referralTag && txHash) {
-        try {
-          const chainId = await walletClient.getChainId();
-          await submitReferral({ txHash, chainId });
-          console.log('Divvi referral submitted for invite claim');
-        } catch (referralError) {
-          console.warn('Referral submission failed for invite claim:', referralError);
+          txHash = await (window.ethereum as EIP1193Provider).request({
+            method: 'eth_sendTransaction',
+            params: [txParams]
+          }) as `0x${string}`;
+        } else {
+          txHash = await writeContractAsync({
+            address: ENB_MINI_APP_ADDRESS,
+            abi: ENB_MINI_APP_ABI,
+            functionName: 'claimForInvite',
+            args: [address, BigInt(25 * Math.pow(10, 18))]
+          }) as `0x${string}`;
         }
       }
 
@@ -617,53 +591,53 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
         args: [address, targetLevel]
       });
 
-      let finalTxData = baseTxData;
-      let referralTag = '';
-      let walletClient = null;
+      let txHash: `0x${string}`;
 
       try {
         if (typeof window === 'undefined' || !window.ethereum) {
           throw new Error('Ethereum provider not found');
         }
 
-        const ethereum = window.ethereum as EIP1193Provider;
-
-        walletClient = createWalletClient({
+        // Step 1: Create a wallet client and get the account
+        const walletClient = createWalletClient({
           chain: base,
-          transport: custom(ethereum)
+          transport: custom(window.ethereum),
+        });
+        const [account] = await walletClient.getAddresses();
+
+        // Step 2: Generate a referral tag for the user
+        const referralTag = getReferralTag({
+          user: account, // The user address making the transaction
+          consumer: '0xaF108Dd1aC530F1c4BdED13f43E336A9cec92B44', // Your Divvi Identifier
         });
 
-        referralTag = getReferralTag({
-          user: address as `0x${string}`,
-          consumer: DIVVI_CONFIG.consumer as `0x${string}`,
-          providers: DIVVI_CONFIG.providers as `0x${string}`[]
+        // Step 3: Send the transaction with referral tag
+        txHash = await walletClient.sendTransaction({
+          account,
+          to: ENB_MINI_APP_ADDRESS as `0x${string}`,
+          data: (baseTxData + referralTag) as `0x${string}`,
         });
 
-        finalTxData = (baseTxData + referralTag) as `0x${string}`;
-        console.log('Divvi referral tag added to upgrade transaction');
+        // Step 4: Get the chain ID of the chain that the transaction was sent to
+        const chainId = await walletClient.getChainId();
+
+        // Step 5: Report the transaction to Divvi
+        await submitReferral({
+          txHash,
+          chainId,
+        });
+
+        console.log('Divvi referral submitted for upgrade');
       } catch (referralError) {
         console.warn('Referral setup failed for upgrade:', referralError);
-      }
-
-      let gasEstimate;
-      try {
-        gasEstimate = await publicClient.estimateGas({
-          account: address,
-          to: ENB_MINI_APP_ADDRESS,
-          data: finalTxData
-        });
-      } catch {
-        gasEstimate = BigInt(100000); // fallback
-      }
-
-      let txHash: `0x${string}`;
-
+        
+        // Fallback to regular transaction without referral
       if (window.ethereum) {
         const txParams = {
           from: address as `0x${string}`,
           to: ENB_MINI_APP_ADDRESS as `0x${string}`,
-          data: finalTxData,
-          gas: `0x${gasEstimate.toString(16)}` as `0x${string}`
+            data: baseTxData,
+            gas: `0x${BigInt(100000).toString(16)}` as `0x${string}`
         };
 
         txHash = await (window.ethereum as EIP1193Provider).request({
@@ -677,15 +651,6 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
           functionName: 'upgradeMembership',
           args: [address, targetLevel]
         }) as `0x${string}`;
-      }
-
-      if (walletClient && referralTag && txHash) {
-        try {
-          const chainId = await walletClient.getChainId();
-          await submitReferral({ txHash, chainId });
-          console.log('Divvi referral submitted for upgrade');
-        } catch (referralError) {
-          console.warn('Referral submission failed for upgrade:', referralError);
         }
       }
 
@@ -979,9 +944,9 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
                   <span className="text-gray-600">Loading...</span>
                 </div>
               ) : (
-                <p className="text-lg font-semibold text-blue-600">
+              <p className="text-lg font-semibold text-blue-600">
                   {enbBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} ENB
-                </p>
+              </p>
               )}
             </div>
             <div>
