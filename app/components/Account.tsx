@@ -43,6 +43,14 @@ interface UserProfile {
   isActivated: boolean;
 }
 
+interface TipStep {
+  id: string;
+  title: string;
+  description: string;
+  targetElementId: string;
+  highlightText: string;
+}
+
 interface AccountProps {
   setActiveTabAction: (tab: string) => void;
 }
@@ -70,6 +78,11 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
   }>({ hours: 0, minutes: 0, seconds: 0 });
   const [canClaim, setCanClaim] = useState(false);
 
+  // Tips state
+  const [showTipsModal, setShowTipsModal] = useState(false);
+  const [currentTipStep, setCurrentTipStep] = useState(0);
+  const [hasSeenTips, setHasSeenTips] = useState(false);
+
   const getMembershipLevelColor = (level: string) => {
     switch (level) {
       case 'Based': return 'text-blue-600';
@@ -90,6 +103,106 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
       hour: '2-digit',
       minute: '2-digit',
     });
+
+  // Define the tip steps
+  const tipSteps: TipStep[] = [
+    {
+      id: 'daily-claim',
+      title: 'Claim ENB Daily',
+      description: 'Claim your daily ENB rewards here. The amount depends on your membership level: Based (5 ENB), Super Based (10 ENB), or Legendary (15 ENB). Come back every 24 hours to claim!',
+      targetElementId: 'daily-claim-section',
+      highlightText: 'Daily Claim'
+    },
+    {
+      id: 'share-invitation',
+      title: 'Share Your Invitation Code',
+      description: 'Share your unique invitation code with friends to help them join the platform. Every person who uses your code helps grow the community!',
+      targetElementId: 'basic-info-section',
+      highlightText: 'Share Invitation Code'
+    },
+    {
+      id: 'claim-invites',
+      title: 'Claim Extra ENB For Invites',
+      description: 'Earn bonus ENB tokens for each person who joins using your invitation code. Check your invitation statistics to see how many people you\'ve invited!',
+      targetElementId: 'invitation-stats-section',
+      highlightText: 'Claim $ENB for your invites'
+    },
+    {
+      id: 'upgrade-level',
+      title: 'Upgrade To A Higher Level',
+      description: 'Upgrade your membership level to earn more daily ENB. You need consecutive daily claims and ENB tokens in your wallet. Higher levels = higher daily rewards!',
+      targetElementId: 'upgrade-section',
+      highlightText: 'Upgrade Mining Level'
+    }
+  ];
+
+  // Add this function to check if user has seen tips (you can use localStorage or a user preference)
+  const checkIfUserHasSeenTips = () => {
+    try {
+      const seen = localStorage.getItem('enb-tips-seen');
+      return seen === 'true';
+    } catch {
+      return false;
+    }
+  };
+
+  const markTipsAsSeen = () => {
+    try {
+      localStorage.setItem('enb-tips-seen', 'true');
+    } catch {
+      // Ignore localStorage errors
+    }
+  };
+
+  // Function to scroll to specific elements
+  const scrollToElement = (elementId: string) => {
+    setTimeout(() => {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'center'
+        });
+      }
+    }, 100);
+  };
+
+  // Functions to handle the tips modal
+  const handleNextTip = () => {
+    if (currentTipStep < tipSteps.length - 1) {
+      setCurrentTipStep(currentTipStep + 1);
+      scrollToElement(tipSteps[currentTipStep + 1].targetElementId);
+    }
+  };
+
+  const handlePreviousTip = () => {
+    if (currentTipStep > 0) {
+      setCurrentTipStep(currentTipStep - 1);
+      scrollToElement(tipSteps[currentTipStep - 1].targetElementId);
+    }
+  };
+
+  const handleFinishTips = () => {
+    setShowTipsModal(false);
+    setCurrentTipStep(0);
+    markTipsAsSeen();
+    setHasSeenTips(true);
+  };
+
+  const handleSkipTips = () => {
+    setShowTipsModal(false);
+    setCurrentTipStep(0);
+    markTipsAsSeen();
+    setHasSeenTips(true);
+  };
+
+  // Add a function to restart tips (optional - you can add a button for this)
+  const handleRestartTips = () => {
+    setCurrentTipStep(0);
+    setShowTipsModal(true);
+    scrollToElement(tipSteps[0].targetElementId);
+  };
 
   // Calculate time remaining until next daily claim
   const calculateTimeLeft = useCallback((lastDailyClaimTime: string | null) => {
@@ -480,6 +593,19 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
     checkAccountStatus();
   }, [checkAccountStatus]);
 
+  // Add this useEffect to show tips on first load
+  useEffect(() => {
+    if (profile && profile.isActivated) {
+      const hasSeenTipsBefore = checkIfUserHasSeenTips();
+      if (!hasSeenTipsBefore) {
+        setShowTipsModal(true);
+        setHasSeenTips(false);
+      } else {
+        setHasSeenTips(true);
+      }
+    }
+  }, [profile]);
+
   // Loading state
   if (loading) {
     return (
@@ -554,13 +680,89 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
     return null;
   }
 
+  // Tips Modal Component
+  const TipsModal = () => {
+    const currentStep = tipSteps[currentTipStep];
+    const isLastStep = currentTipStep === tipSteps.length - 1;
+    const isFirstStep = currentTipStep === 0;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 relative">
+          {/* Progress indicator */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Step {currentTipStep + 1} of {tipSteps.length}
+              </span>
+              <button
+                onClick={handleSkipTips}
+                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                Skip Tour
+              </button>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${((currentTipStep + 1) / tipSteps.length) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+
+          <div className="text-center mb-6">
+            <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-4">
+              <Icon name="check" size="lg" className="text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              {currentStep.title}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+              {currentStep.description}
+            </p>
+          </div>
+
+          <div className="flex justify-between space-x-3">
+            <button
+              onClick={handlePreviousTip}
+              disabled={isFirstStep}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                isFirstStep 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Previous
+            </button>
+            
+            {isLastStep ? (
+              <button
+                onClick={handleFinishTips}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Finish Tour
+              </button>
+            ) : (
+              <button
+                onClick={handleNextTip}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Next
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-xl font-semibold mb-2 text-gray-800">Account Profile</h1>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Basic Info */}
-        <div className="bg-white p-6 rounded-lg shadow-md border">
+        <div id="basic-info-section" className="bg-white p-6 rounded-lg shadow-md border">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Basic Information</h2>
           <div className="space-y-3">
             <div>
@@ -665,7 +867,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
 
         {/* Invitation Statistics */}
         {profile.invitationUsage && (
-          <div className="bg-white p-6 rounded-lg shadow-md border">
+          <div id="invitation-stats-section" className="bg-white p-6 rounded-lg shadow-md border">
             <h2 className="text-xl font-semibold mb-4 text-gray-800">Invitation Statistics</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4 text-center">
@@ -705,7 +907,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
         )}
 
         {/* Daily Claim Actions */}
-        <div className="bg-white p-6 rounded-lg shadow-md border">
+        <div id="daily-claim-section" className="bg-white p-6 rounded-lg shadow-md border">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Daily Claim</h2>
           <div className="space-y-4">
             {/* Countdown Timer */}
@@ -772,7 +974,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
         </div>
 
         {/* Upgrade */}
-        <div className="bg-white p-6 rounded-lg shadow-md border">
+        <div id="upgrade-section" className="bg-white p-6 rounded-lg shadow-md border">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Upgrade</h2>
           <div className="space-y-3">
             {/* Helpful Note */}
@@ -972,6 +1174,20 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tips Modal */}
+      {showTipsModal && <TipsModal />}
+
+      {/* Help button to restart tips */}
+      {hasSeenTips && (
+        <button
+          onClick={handleRestartTips}
+          className="fixed bottom-4 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 z-40"
+          title="Restart Tips Tour"
+        >
+          <Icon name="star" size="sm" />
+        </button>
       )}
 
     </div>
