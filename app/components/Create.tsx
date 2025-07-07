@@ -82,7 +82,6 @@ export const Create: React.FC<CreateProps> = ({ setActiveTabAction }) => {
     setIsCreatingAccount(true);
 
     try {
-      const publicClient = createPublicClient({ chain: base, transport: http() });
 
       const baseTxData = encodeFunctionData({
         abi: ENB_MINI_APP_ABI,

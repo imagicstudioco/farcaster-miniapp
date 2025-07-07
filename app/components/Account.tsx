@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { ENB_MINI_APP_ABI, ENB_MINI_APP_ADDRESS, ENB_TOKEN_ABI, ENB_TOKEN_ADDRESS } from '../constants/enbMiniAppAbi';
 import { API_BASE_URL } from '../config';
@@ -283,30 +283,32 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
     }
   }, [address, calculateTimeLeft]);
 
-  const fetchEnbBalance = async () => {
-    if (!address) return;
-    
-    setEnbBalanceLoading(true);
-    try {
-      const publicClient = createPublicClient({ chain: base, transport: http() });
-      
-      const balance = await publicClient.readContract({
-        address: ENB_TOKEN_ADDRESS as `0x${string}`,
-        abi: ENB_TOKEN_ABI,
-        functionName: 'balanceOf',
-        args: [address as `0x${string}`]
-      });
-      
-      // Convert from wei to ENB (assuming 18 decimals)
-      const balanceInEnb = Number(balance) / Math.pow(10, 18);
-      setEnbBalance(balanceInEnb);
-    } catch (err) {
-      console.error('Error fetching ENB balance:', err);
-      setEnbBalance(0);
-    } finally {
-      setEnbBalanceLoading(false);
-    }
-  };
+  const publicClient = useMemo(() => {
+  return createPublicClient({ chain: base, transport: http() });
+}, []);
+
+
+const fetchEnbBalance = useCallback(async () => {
+  if (!address) return;
+
+  setEnbBalanceLoading(true);
+  try {
+    const balance = await publicClient.readContract({
+      address: ENB_TOKEN_ADDRESS as `0x${string}`,
+      abi: ENB_TOKEN_ABI,
+      functionName: 'balanceOf',
+      args: [address as `0x${string}`]
+    });
+
+    const balanceInEnb = Number(balance) / Math.pow(10, 18);
+    setEnbBalance(balanceInEnb);
+  } catch (err) {
+    console.error('Error fetching ENB balance:', err);
+    setEnbBalance(0);
+  } finally {
+    setEnbBalanceLoading(false);
+  }
+}, [address, publicClient]); // publicClient is now stable
 
   const refreshProfile = async () => {
     if (!address) return;
@@ -328,8 +330,6 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
 
     setDailyClaimLoading(true);
     try {
-      const publicClient = createPublicClient({ chain: base, transport: http() });
-
       const baseTxData = encodeFunctionData({
         abi: ENB_MINI_APP_ABI,
         functionName: 'dailyClaim',
@@ -464,8 +464,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
 
     setInviteClaimLoading(true);
     try {
-      const publicClient = createPublicClient({ chain: base, transport: http() });
-
+      
       const baseTxData = encodeFunctionData({
         abi: ENB_MINI_APP_ABI,
         functionName: 'claimForInvite',
@@ -583,8 +582,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
     setUpgradeLoading(true);
     setUpgradeError(null);
     try {
-      const publicClient = createPublicClient({ chain: base, transport: http() });
-
+      
       const baseTxData = encodeFunctionData({
         abi: ENB_MINI_APP_ABI,
         functionName: 'upgradeMembership',
