@@ -6,9 +6,7 @@ import { ENB_MINI_APP_ABI, ENB_MINI_APP_ADDRESS } from '../constants/enbMiniAppA
 import { API_BASE_URL } from '../config';
 import {
   createWalletClient,
-  createPublicClient,
   encodeFunctionData,
-  http,
   custom,
   EIP1193Provider
 } from 'viem';
