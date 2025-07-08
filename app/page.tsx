@@ -9,6 +9,7 @@ import { Button } from "./components/Button";
 import { Icon } from "./components/Icon";
 import { Account } from "./components/Account";
 import { Create } from "./components/Create";
+import { Maintenance } from "./components/Maintenance";
 import { useAccount, useConnect } from "wagmi";
 import { farcasterFrame } from '@farcaster/frame-wagmi-connector';
 import Image from "next/image";
@@ -18,7 +19,7 @@ export default function App() {
   const [frameAdded, setFrameAdded] = useState(false);
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
-  const [activeTab, setActiveTabAction] = useState("account");
+  const [activeTab, setActiveTabAction] = useState("maintenance");
   const { addFrame } = useAddFrame();
   const frameConnector = useMemo(() => farcasterFrame(), []);
 
@@ -119,6 +120,7 @@ export default function App() {
         <main className="flex-1">
         {activeTab === "account" && <Account setActiveTabAction={setActiveTabAction} />}
         {activeTab === "create" && <Create setActiveTabAction={setActiveTabAction} />}
+        {activeTab === "maintenance" && <Maintenance />}
         </main>
 
         <footer className="mt-2 pt-4 flex justify-center">ENB Mini App</footer>
