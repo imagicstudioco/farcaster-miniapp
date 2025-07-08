@@ -1,6 +1,5 @@
 'use client';
 
-import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Button } from "./components/Button";
 import { Icon } from "./components/Icon";
@@ -13,40 +12,51 @@ import Image from "next/image";
 import { sdk } from "@farcaster/miniapp-sdk";
 
 export default function App() {
-  const { setFrameReady, isFrameReady } = useMiniKit();
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
   const [activeTab, setActiveTabAction] = useState("maintenance");
   const [miniAppAdded, setMiniAppAdded] = useState(false);
   const frameConnector = useMemo(() => farcasterFrame(), []);
 
+  // Auto-connect wallet if not connected
   useEffect(() => {
-    if (!isFrameReady) setFrameReady();
-  }, [isFrameReady, setFrameReady]);
-
-  useEffect(() => {
-    (async () => {
+    const autoConnect = async () => {
       if (!isConnected) {
         try {
           await connect({ connector: frameConnector });
-        } catch (e) {
-          console.error("Auto-connect failed:", e);
+        } catch (err: unknown) {
+          if (err instanceof Error) {
+            console.error("Auto-connect failed:", err.message);
+          } else {
+            console.error("Auto-connect failed with unknown error:", err);
+          }
         }
       }
-    })();
+    };
+
+    autoConnect();
   }, [isConnected, connect, frameConnector]);
+
+  // Tell Farcaster the Mini App is ready
+  useEffect(() => {
+    sdk.ready();
+  }, []);
 
   const handleAddMiniApp = useCallback(async () => {
     try {
       await sdk.actions.addMiniApp();
       setMiniAppAdded(true);
-    } catch (err: any) {
-      if (err.name === 'RejectedByUser') {
-        console.warn("User rejected adding the Mini App");
-      } else if (err.name === 'InvalidDomainManifestJson') {
-        console.error("Manifest JSON is invalid");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        if (err.name === "RejectedByUser") {
+          console.warn("User rejected adding the Mini App");
+        } else if (err.name === "InvalidDomainManifestJson") {
+          console.error("Manifest JSON is invalid");
+        } else {
+          console.error("Unknown error adding Mini App:", err.message);
+        }
       } else {
-        console.error("Unknown error adding Mini App:", err);
+        console.error("Non-standard error occurred while adding Mini App:", err);
       }
     }
   }, []);
@@ -60,6 +70,7 @@ export default function App() {
         </div>
       );
     }
+
     return (
       <Button
         variant="ghost"
@@ -80,7 +91,13 @@ export default function App() {
       <header className="fixed top-0 left-0 right-0 bg-[var(--app-background)] border-b border-[var(--app-gray)] z-50">
         <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Image src="/header-logo.png" alt="ENB Mini App Logo" width={40} height={40} className="rounded-lg" />
+            <Image
+              src="/header-logo.png"
+              alt="ENB Mini App Logo"
+              width={40}
+              height={40}
+              className="rounded-lg"
+            />
             <h1 className="text-xl font-bold">ENB MINI APP</h1>
           </div>
 
