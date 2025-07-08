@@ -104,7 +104,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
     {
       id: 'daily-claim',
       title: 'Claim ENB Daily',
-      description: 'Claim your daily ENB rewards here. The amount depends on your membership level: Based (5 ENB), Super Based (10 ENB), or Legendary (15 ENB). Come back every 24 hours to claim!',
+      description: 'Claim your daily ENB rewards here. The amount depends on your membership level: Based (10 ENB), Super Based (15 ENB), or Legendary (20 ENB). Come back every 24 hours to claim!',
       targetElementId: 'daily-claim-section',
       highlightText: 'Daily Claim'
     },
@@ -1117,7 +1117,7 @@ const fetchEnbBalance = useCallback(async () => {
                   <p className="text-sm font-medium">Upgrade Requirements</p>
                   <p className="text-sm mt-1">
                     • You need ETH in your wallet to pay for gas fees<br/>
-                    • It will cost you ENB tokens to upgrade: 30,000 ENB for Super Based, 30,000 ENB for Legendary<br/>
+                    • It will cost you ENB tokens to upgrade: 30,000 ENB for Super Based, 60,000 ENB for Legendary<br/>
                     • Based → Super Based: {profile.membershipLevel === 'Based' ? `${profile.consecutiveDays}/14` : '14/14'} consecutive days<br/>
                     • Super Based → Legendary: {profile.membershipLevel === 'Super Based' ? `${profile.consecutiveDays}/28` : '28/28'} consecutive days
                   </p>
