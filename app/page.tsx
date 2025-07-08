@@ -37,9 +37,13 @@ export default function App() {
     autoConnect();
   }, [isConnected, connect, frameConnector]);
 
-  // Tell Farcaster the Mini App is ready
+  // Notify Warpcast that the app is ready
   useEffect(() => {
-    sdk.ready();
+    try {
+      sdk.actions.ready();
+    } catch (err) {
+      console.error("Failed to signal Mini App readiness:", err);
+    }
   }, []);
 
   const handleAddMiniApp = useCallback(async () => {
