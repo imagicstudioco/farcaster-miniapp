@@ -14,7 +14,7 @@ import { sdk } from "@farcaster/miniapp-sdk";
 export default function App() {
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
-  const [activeTab, setActiveTabAction] = useState("maintenance");
+  const [activeTab, setActiveTabAction] = useState("account");
   const [miniAppAdded, setMiniAppAdded] = useState(false);
   const frameConnector = useMemo(() => farcasterFrame(), []);
 
