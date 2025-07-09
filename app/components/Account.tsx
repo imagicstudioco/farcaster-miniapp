@@ -18,7 +18,6 @@ import { Button } from "./Button";
 import { Icon } from "./Icon";
 import { sdk } from '@farcaster/frame-sdk'
 import { useFrame } from '../farcaster-provider'
-import Image from 'next/image';
 
 interface UserProfile {
   walletAddress: string;
@@ -881,7 +880,7 @@ const fetchEnbBalance = useCallback(async () => {
         {context?.user ? (
           <>
             {context?.user?.pfpUrl && (
-              <Image
+              <img
                 src={context?.user?.pfpUrl}
                 className="w-14 h-14 rounded-full"
                 alt="User Profile"
