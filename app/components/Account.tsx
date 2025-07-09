@@ -17,6 +17,7 @@ import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 import { Button } from "./Button";
 import { Icon } from "./Icon";
 import { sdk } from '@farcaster/frame-sdk'
+import { useFrame } from '../farcaster-provider'
 
 interface UserProfile {
   walletAddress: string;
@@ -64,7 +65,7 @@ export const Account: React.FC<AccountProps> = ({ setActiveTabAction }) => {
   const [enbBalance, setEnbBalance] = useState<number>(0);
   const [enbBalanceLoading, setEnbBalanceLoading] = useState(false);
   const [inviteClaimLoading, setInviteClaimLoading] = useState(false);
-  
+const { context } = useFrame()  
   // Countdown state
   const [timeLeft, setTimeLeft] = useState<{
     hours: number;
@@ -875,6 +876,23 @@ const fetchEnbBalance = useCallback(async () => {
         {/* Basic Info */}
         <div id="basic-info-section" className="bg-white p-6 rounded-lg shadow-md border">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Basic Information</h2>
+<div className="flex flex-row space-x-4 justify-start items-start">
+        {context?.user ? (
+          <>
+            {context?.user?.pfpUrl && (
+              <img
+                src={context?.user?.pfpUrl}
+                className="w-14 h-14 rounded-full"
+                alt="User Profile"
+                width={56}
+                height={56}
+              />
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-left">User context not available</p>
+        )}
+      </div>
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium text-gray-600">Wallet Address</label>
