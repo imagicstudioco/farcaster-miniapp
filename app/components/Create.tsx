@@ -11,7 +11,8 @@ import {
   http,
   custom,
   EIP1193Provider,
-  Hash
+  Hash,
+  WalletClient
 } from 'viem';
 import { base } from 'viem/chains';
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
@@ -39,7 +40,7 @@ interface CreateProps {
 
 interface DivviReferralData {
   referralTag: string;
-  walletClient: any;
+  walletClient: WalletClient;
   chainId: number;
 }
 
@@ -187,16 +188,14 @@ export const Create: React.FC<CreateProps> = ({ setActiveTabAction }) => {
       let txHash: Hash;
       
       if (window.ethereum) {
-        const txParams = {
-          from: address,
-          to: ENB_MINI_APP_ADDRESS,
-          data: finalTxData,
-          gas: `0x${gasEstimate.toString(16)}` as `0x${string}`
-        };
-
         txHash = await (window.ethereum as EIP1193Provider).request({
           method: 'eth_sendTransaction',
-          params: [txParams]
+          params: [{
+            from: address,
+            to: ENB_MINI_APP_ADDRESS as `0x${string}`,
+            data: finalTxData,
+            gas: `0x${gasEstimate.toString(16)}` as `0x${string}`
+          }]
         }) as Hash;
       } else {
         // Fallback to wagmi writeContract if no direct ethereum access
@@ -416,7 +415,7 @@ export const Create: React.FC<CreateProps> = ({ setActiveTabAction }) => {
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
                 Your mining account has been created.
-                You'll need an activation code to start earning.
+                You&apos;ll need an activation code to start earning.
               </p>
             </div>
             <div className="flex justify-center space-x-4">
